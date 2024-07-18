@@ -1,10 +1,13 @@
 #define SHORT_TOUCH 5         // Short touch duration in milliseconds
 
+Preferences preferences;
+
 struct TableLamp : Service::LightBulb {
   int lampPin;                               // store the pin number connected to a hypothetical relay that turns the Table Lamp on/off
   int powerButtonPin;
 
   SpanCharacteristic *lampPower;             // store a reference to the On Characteristic
+  Preferences preferences;
 
   unsigned long lastTouchTime = 0;           // Time of the last touch event
   unsigned long touchStartTime = 0;          // Time when a touch started
@@ -15,17 +18,31 @@ struct TableLamp : Service::LightBulb {
     
     this->lampPin = lampPin;                   // save the pin number for the hypothetical relay
     this->powerButtonPin = powerButtonPin;
+    this->preferences = preferences;
 
     // new SpanButton(powerButtonPin, SpanButton::TRIGGER_ON_TOUCH);
 
     pinMode(lampPin, OUTPUT);                 // configure the pin as an output using the standard Arduino pinMode function
     pinMode(powerButtonPin, INPUT);
+
+    preferences.begin("TableLamp", false);    // Open preferences with the namespace "TableLamp"
+
+    // Restore the lamp state from preferences
+    bool savedLampState = preferences.getBool("lampState", false);
+    lampPower->setVal(savedLampState);
+    digitalWrite(lampPin, savedLampState);
+
+    LOG1("Restored lamp state: ");
+    LOG1(savedLampState ? "true" : "false");
   }
 
   boolean update() {
     if (lampPower->updated()) {
       LOG1("  New Power=");
       LOG1(lampPower->getNewVal() ? "true" : "false");
+
+      // Save the new state to preferences
+      preferences.putBool("lampState", lampPower->getNewVal());
     }
 
     digitalWrite(lampPin, lampPower->getNewVal());      // use standard Arduino digitalWrite function to change the ledPin to either high or low based on the value requested by HomeKit
@@ -53,7 +70,14 @@ struct TableLamp : Service::LightBulb {
 
       int newValue = 1 - lampPower->getVal();
 
+      // Update Apple Home app state
       lampPower->setVal(newValue);
+
+      // Update memorized state
+      preferences.putBool("lampState", newValue);
+
+      // Update state of Lamp
+      digitalWrite(lampPin, newValue);
 
       lastTouchTime = currentTime;
     }

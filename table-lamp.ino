@@ -1,3 +1,4 @@
+#include <Preferences.h>
 #include "HomeSpan.h"
 #include "table-lamp-service.h"
 
@@ -11,10 +12,8 @@ const char* password = "YourWiFiPassword";
 void setup() {
   Serial.begin(9600);
 
-  pinMode(BUTTON_PIN, OUTPUT);
-
   homeSpan.setStatusPin(STATUS_LED);
-  homeSpan.setStatusAutoOff(10);
+  homeSpan.setStatusAutoOff(5);
 
   homeSpan.setWifiCredentials(ssid, password);
   homeSpan.setPairingCode("2255533");
@@ -29,5 +28,5 @@ void setup() {
 }
 
 void loop() {
- homeSpan.poll();
+  homeSpan.poll();
 }
